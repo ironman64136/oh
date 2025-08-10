@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Full Screen & Play Video</title>
+<title>Full Screen & Play Video with Background Sound</title>
 <style>
+  /* Basic styles */
   body {
     margin: 0;
     background: black;
@@ -83,6 +84,43 @@
     background: black;
   }
 
+  /* Loading overlay with spinner */
+  #loadingOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: black;
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+    opacity: 1;
+    transition: opacity 0.4s ease;
+  }
+
+  #loadingOverlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Spinner style */
+  .spinner {
+    border: 8px solid rgba(255, 255, 255, 0.2);
+    border-top: 8px solid white;
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    animation: spin 1.2s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
   @keyframes pulse {
     0% { opacity: 0.6; }
     50% { opacity: 1; }
@@ -95,13 +133,54 @@
   }
 </style>
 </head>
-<body onclick="playVideoOnce()">
+<body>
+
+  <!-- Loading screen -->
+  <div id="loadingOverlay">
+    <div class="spinner"></div>
+  </div>
+
   <div class="blurry-text">SOUND</div>
   <div class="tap-text">Tap to View Content</div>
 
   <video id="myVideo" src="pramk.mp4" preload="auto" playsinline></video>
 
+  <!-- Background audio -->
+  <audio id="bgAudio" src="p1.mp3" loop preload="auto" muted></audio>
+
 <script>
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const video = document.getElementById('myVideo');
+  const bgAudio = document.getElementById('bgAudio');
+
+  // Start muted audio ASAP (to allow autoplay policies)
+  bgAudio.play().catch(() => { /* ignore autoplay errors */ });
+
+  // Block clicks initially until loading is done
+  document.body.style.pointerEvents = 'none';
+
+  // Check if page and video are loaded fully
+  function checkLoaded() {
+    if (document.readyState === 'complete' && video.readyState >= 4) { // HAVE_ENOUGH_DATA = 4
+      loadingOverlay.classList.add('hidden');
+      setTimeout(() => {
+        loadingOverlay.style.display = 'none';
+        // Enable body clicks after loading
+        document.body.style.pointerEvents = 'auto';
+      }, 400);
+    }
+  }
+
+  window.addEventListener('load', checkLoaded);
+  video.addEventListener('loadeddata', checkLoaded);
+
+  // Only trigger playVideoOnce if loading is finished
+  document.body.addEventListener('click', () => {
+    if (loadingOverlay.style.display === 'none') {
+      playVideoOnce();
+    }
+  });
+
   async function playVideoOnce() {
     try {
       if (document.documentElement.requestFullscreen) {
@@ -113,23 +192,19 @@
       console.log("Fullscreen request denied", e);
     }
 
+    // Unmute and set volume of background audio on user interaction
+    bgAudio.muted = false;
+    bgAudio.volume = 1.0;
+
     // Hide intro texts
     document.querySelector(".blurry-text").classList.add('hidden');
     document.querySelector(".tap-text").classList.add('hidden');
 
     // Show and play video
-    const video = document.getElementById('myVideo');
     video.style.display = 'block';
     video.play();
 
-    // Optional: keep background blurred (or you can unblur if you want)
-    // document.body.classList.add('unblur'); // comment this if not needed
-
-    // When video ends, stop at end (video will pause automatically)
-    video.onended = () => {
-      // do nothing, video stays at last frame
-      // if you want, you can hide video here or show something else
-    }
+    video.onended = () => {};
   }
 
   // Prevent back navigation by pushing state repeatedly
@@ -153,7 +228,7 @@
     }
   });
 
-  // Disable forbidden keys as before
+  // Disable forbidden keys
   function blockForbiddenKeys(e) {
     const forbiddenKeys = [
       "Escape", "Esc", "Backspace", "F11"
