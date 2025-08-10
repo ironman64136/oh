@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Full Screen & Play</title>
+<style>
+  body {
+    margin: 0;
+    background: black;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: white;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    user-select: none; /* disable text selection */
+  }
+
+  body::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-image: url('prank.jpg'); /* local image */
+    background-size: cover;
+    background-position: center;
+    filter: blur(20px);
+    transform: scale(1.05);
+    z-index: 0;
+  }
+
+  body::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1;
+  }
+
+  .blurry-text {
+    font-size: 3rem;
+    font-weight: bold;
+    color: white;
+    animation: pulse 2s infinite;
+    letter-spacing: 3px;
+    z-index: 2;
+  }
+
+  .tap-text {
+    margin-top: 20px;
+    font-size: 1.5rem;
+    color: #ccc;
+    animation: fade 1.5s infinite;
+    z-index: 2;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+  }
+
+  @keyframes fade {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+</style>
+</head>
+<body onclick="goFullScreenAndPlay()">
+  <div class="blurry-text">SOUND</div>
+  <div class="tap-text">Tap to View Content</div>
+
+  <audio id="myAudio" src="p1.mp3" preload="auto"></audio>
+
+<script>
+  async function goFullScreenAndPlay() {
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      } else if (document.documentElement.webkitRequestFullscreen) {
+        await document.documentElement.webkitRequestFullscreen();
+      }
+    } catch(e) {
+      console.log("Fullscreen request denied", e);
+    }
+
+    const audio = document.getElementById("myAudio");
+    audio.volume = 1.0;
+    audio.play().catch(err => {
+      console.log("Playback failed:", err);
+    });
+
+    document.querySelector(".blurry-text").style.display = "none";
+    document.querySelector(".tap-text").style.display = "none";
+  }
+
+  // Prevent back navigation by pushing state repeatedly
+  function preventBack() {
+    history.pushState(null, null, location.href);
+  }
+  preventBack();
+  window.addEventListener('popstate', () => {
+    preventBack();
+  });
+
+  // Keep fullscreen active if exited (no alert)
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  });
+  document.addEventListener('webkitfullscreenchange', () => {
+    if (!document.webkitFullscreenElement) {
+      document.documentElement.webkitRequestFullscreen().catch(() => {});
+    }
+  });
+
+  // Disable keys that allow exiting or inspecting
+  function blockForbiddenKeys(e) {
+    const forbiddenKeys = [
+      "Escape", "Esc", "Backspace", "F11"
+    ];
+    const forbiddenCtrlKeys = ["w", "W", "r", "R"];
+    const forbiddenCtrlShiftKeys = ["I", "i", "J", "j", "C", "c"];
+
+    if (forbiddenKeys.includes(e.key)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+    if (e.ctrlKey && forbiddenCtrlKeys.includes(e.key)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+    if (e.ctrlKey && e.shiftKey && forbiddenCtrlShiftKeys.includes(e.key)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }
+
+  window.addEventListener('keydown', blockForbiddenKeys, true);
+  document.addEventListener('keydown', blockForbiddenKeys, true);
+
+  // Disable right-click menu
+  window.addEventListener('contextmenu', e => {
+    e.preventDefault();
+  });
+
+  // Disable text selection and dragging
+  document.addEventListener('selectstart', e => e.preventDefault());
+  document.addEventListener('dragstart', e => e.preventDefault());
+</script>
+
+</body>
+</html>
